@@ -18,6 +18,7 @@ export type Insight = {
   text: string;
   timestampSeconds: number;
   owner?: string;
+  dueDate?: string;
 };
 
 export type MeetingStatus = "ready" | "processing";

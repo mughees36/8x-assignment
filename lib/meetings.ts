@@ -76,11 +76,11 @@ export const meetings: Meeting[] = baseMeetings.map((meeting) => ({
     { id: "d4", text: "Run bulk exports in the background with email notification.", timestampSeconds: 2644 },
   ] : [{ id: `${meeting.id}-d`, text: "Proceed with the focused recommendation discussed by the team.", timestampSeconds: 811 }],
   actionItems: meeting.id === "product-launch-planning" ? [
-    { id: "a1", text: "Complete final security review by Friday.", owner: "Priya Nair", timestampSeconds: 1276 },
-    { id: "a2", text: "Publish launch measurement dashboard by Monday.", owner: "Owen Park", timestampSeconds: 1403 },
-    { id: "a3", text: "Deliver competitive one-pager 48 hours before launch.", owner: "Jonah Brooks", timestampSeconds: 2029 },
-    { id: "a4", text: "Brief support and run launch simulation.", owner: "Imani Wilson", timestampSeconds: 3510 },
-  ] : [{ id: `${meeting.id}-a`, text: "Share the written follow-up with the team tomorrow.", owner: meeting.participants[1]?.name, timestampSeconds: 811 }],
+    { id: "a1", text: "Complete final security review by Friday.", owner: "Priya Nair", dueDate: "2026-10-23", timestampSeconds: 1276 },
+    { id: "a2", text: "Publish launch measurement dashboard by Monday.", owner: "Owen Park", dueDate: "2026-10-26", timestampSeconds: 1403 },
+    { id: "a3", text: "Deliver competitive one-pager 48 hours before launch.", owner: "Jonah Brooks", dueDate: "2026-10-25", timestampSeconds: 2029 },
+    { id: "a4", text: "Brief support and run launch simulation.", owner: "Imani Wilson", dueDate: "2026-10-26", timestampSeconds: 3510 },
+  ] : [{ id: `${meeting.id}-a`, text: "Share the written follow-up with the team tomorrow.", owner: meeting.participants[1]?.name, dueDate: new Date(new Date(meeting.date).getTime() + 86_400_000).toISOString().slice(0, 10), timestampSeconds: 811 }],
   highlights: meeting.id === "product-launch-planning" ? [
     { id: "h1", text: "Time-to-insight messaging tested 28% better than feature-led copy.", timestampSeconds: 248 },
     { id: "h2", text: "Northstar Labs reports four recruiter hours saved each week.", timestampSeconds: 1658 },

@@ -8,6 +8,6 @@ html { background: #f5f7f3; }
 body { margin: 0; color: #17211b; background: #f5f7f3; font-feature-settings: "ss01", "cv02"; }
 ::selection { background: #c6efd4; color: #173c29; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
-button:focus-visible, a:focus-visible, input:focus-visible, video:focus-visible { outline: 3px solid rgba(47,155,96,.28); outline-offset: 2px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, video:focus-visible { outline: 3px solid rgba(47,155,96,.4); outline-offset: 2px; }
 .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #c7d0c8 transparent; }
 .noise { background-image: radial-gradient(rgba(23,33,27,.05) .65px, transparent .65px); background-size: 5px 5px; }
