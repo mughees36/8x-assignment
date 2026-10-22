@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#24392d"/><stop offset="1" stop-color="#111914"/></linearGradient><radialGradient id="r"><stop stop-color="#6ba27f" stop-opacity=".45"/><stop offset="1" stop-color="#6ba27f" stop-opacity="0"/></radialGradient></defs>
+  <rect width="1280" height="720" fill="url(#g)"/><circle cx="950" cy="120" r="410" fill="url(#r)"/><g fill="#fff" font-family="system-ui,sans-serif" text-anchor="middle"><circle cx="640" cy="337" r="56" fill="#fff" fill-opacity=".12" stroke="#fff" stroke-opacity=".35"/><path d="M628 308l42 29-42 29z"/><text x="640" y="440" font-size="25" font-weight="600">Product Launch Planning</text><text x="640" y="475" font-size="16" opacity=".55">Sample media preview</text></g>
+</svg>

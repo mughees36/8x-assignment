@@ -1,0 +1,6 @@
+import { FileText, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+const templates = [{name:"Customer discovery",desc:"Pain points, workflows, and buying signals"},{name:"Weekly product sync",desc:"Progress, decisions, risks, and owners"},{name:"Hiring interview",desc:"Evidence, competencies, and next steps"}];
+export default function TemplatesPage() { return <div><div className="flex items-end justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-[-.04em]">Templates</h1><p className="mt-2 text-sm text-[#6f7c74]">Shape the insights captured from each conversation.</p></div><Button variant="green"><Plus size={15}/>New template</Button></div><div className="mt-8 grid gap-4 md:grid-cols-3">{templates.map((template)=><Card key={template.name} className="p-5"><span className="grid size-10 place-items-center rounded-xl bg-moss-50 text-moss-700"><FileText size={18}/></span><h2 className="mt-5 text-sm font-semibold">{template.name}</h2><p className="mt-2 text-xs leading-5 text-[#77837b]">{template.desc}</p><button className="mt-5 text-xs font-semibold text-moss-700">Use template →</button></Card>)}</div></div>; }

@@ -1,0 +1,1 @@
+export default function Loading() { return <div className="animate-pulse"><div className="h-4 w-32 rounded bg-[#e1e6e0]"/><div className="mt-6 h-9 w-96 max-w-full rounded bg-[#e1e6e0]"/><div className="mt-8 grid gap-5 xl:grid-cols-[1.55fr_.85fr]"><div className="aspect-video rounded-2xl bg-[#dfe5df]"/><div className="h-96 rounded-2xl bg-[#e5eae4]"/></div></div>; }
