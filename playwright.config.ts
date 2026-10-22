@@ -8,7 +8,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Next's development compiler can race while generating dynamic share routes
+  // under parallel desktop/mobile navigation. Serial workers keep local and CI
+  // runs deterministic; the two viewport projects still exercise both layouts.
+  workers: 1,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: `http://127.0.0.1:${testPort}`,

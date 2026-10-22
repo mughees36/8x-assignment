@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 async function clearState(page: Page) {
   await page.goto("/");
@@ -167,4 +169,50 @@ test("live room records fake browser media and shows honest processing failure w
   await expect(page.getByText("Saving recording")).toBeVisible();
   await expect(page.getByText(/original recording retained/)).toBeVisible({ timeout: 5000 });
   await expect(page.getByRole("button", { name: "Retry processing" })).toBeVisible();
+});
+
+test.describe("private local meeting intelligence", () => {
+  test("local meetings require explicit token shares that work in a fresh context and enforce clip bounds", async ({ page, request, browser }, testInfo) => {
+    const id = `local-playwright-${testInfo.project.name}`;
+    const meetingDir = path.join(process.cwd(), ".data", "meetings");
+    const recordingDir = path.join(process.cwd(), ".data", "recordings", id);
+    const meeting = { id, title: "Private Playwright Meeting", date: "2026-10-23T10:00:00Z", durationSeconds: 20, participants: [{ id: "speaker", name: "Speaker", role: "Recorded locally", initials: "S", color: "#245c45" }], summary: "The team chose Friday for the review.", tags: ["Local AI"], status: "ready", origin: "local-recording", source: "Local recording", transcript: [{ id: "local-t-1", speakerId: "speaker", startSeconds: 4, text: "We chose Friday for the review." }], decisions: [], actionItems: [], highlights: [], summaries: { General: { overview: "The team chose Friday for the review.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] }, "Executive Brief": { overview: "Friday review.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] }, "Action-Focused": { overview: "Prepare for Friday.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] } }, mediaUrl: `/api/local-ai/meetings/${id}/audio`, audio: { mimeType: "audio/webm", originalFileName: "original.media" } };
+    await mkdir(meetingDir, { recursive: true }); await mkdir(recordingDir, { recursive: true });
+    await writeFile(path.join(meetingDir, `${id}.json`), JSON.stringify(meeting)); await writeFile(path.join(recordingDir, "original.media"), "test-audio");
+    let token = "";
+    try {
+      expect((await request.get(`/share/${id}`)).status()).toBe(404);
+      await page.goto(`/meetings/${id}`); await page.getByRole("button", { name: "Share or clip" }).click();
+      await expect(page.getByText("Private until you create a link")).toBeVisible();
+      await page.getByRole("button", { name: "Create public link" }).click();
+      const publicLink = page.getByLabel("Public meeting link"); await expect(publicLink).toHaveValue(/\/share\/[A-Za-z0-9_-]{43}$/);
+      token = (await publicLink.inputValue()).split("/").at(-1)!;
+      await expect.poll(async () => (await request.get(`/share/${token}`)).status()).toBe(200);
+      const context = await browser.newContext(); const fresh = await context.newPage(); await fresh.goto(`/share/${token}?start=2&end=7&title=Review`);
+      await expect(fresh.getByRole("heading", { name: "Review" })).toBeVisible(); await expect(fresh.getByText("We chose Friday for the review.")).toBeVisible();
+      const media = fresh.locator("video"); await media.evaluate((element) => { Object.defineProperty(element, "duration", { configurable: true, value: 20 }); element.dispatchEvent(new Event("loadedmetadata")); });
+      await expect.poll(()=>media.evaluate(element=>(element as HTMLVideoElement).currentTime)).toBe(2);
+      await media.evaluate((element) => { Object.defineProperty(element, "currentTime", { configurable: true, writable: true, value: 7.1 }); element.dispatchEvent(new Event("timeupdate")); });
+      await expect.poll(()=>media.evaluate(element=>(element as HTMLVideoElement).currentTime)).toBe(7);
+      await context.close();
+    } finally {
+      await rm(path.join(meetingDir, `${id}.json`), { force: true }); await rm(recordingDir, { recursive: true, force: true });
+      if (token) await rm(path.join(process.cwd(), ".data", "shares", `${token}.json`), { force: true });
+    }
+  });
+
+  test("Ask this meeting renders grounded citations and honest errors", async ({ page }, testInfo) => {
+    const id = `local-asktest-${testInfo.project.name}`; const meetingDir = path.join(process.cwd(), ".data", "meetings");
+    const meeting = { id, title: "Ask Test Meeting", date: "2026-10-23T10:00:00Z", durationSeconds: 20, participants: [{ id: "speaker", name: "Speaker", role: "Recorded locally", initials: "S", color: "#245c45" }], summary: "A test summary.", tags: ["Local AI"], status: "ready", origin: "local-recording", source: "Local recording", transcript: [{ id: "local-t-1", speakerId: "speaker", startSeconds: 4, text: "Friday is the review day." }], decisions: [], actionItems: [], highlights: [], summaries: { General: { overview: "Test.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] }, "Executive Brief": { overview: "Test.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] }, "Action-Focused": { overview: "Test.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] } }, mediaUrl: `/api/local-ai/meetings/${id}/audio`, audio: { mimeType: "audio/webm", originalFileName: "original.media" } };
+    await mkdir(meetingDir, { recursive: true }); await writeFile(path.join(meetingDir, `${id}.json`), JSON.stringify(meeting));
+    try {
+      expect((await page.request.post("/api/local-ai/meetings/local-missing1/ask", { data: { question: "What happened?" } })).status()).toBe(404);
+      await page.route(`**/api/local-ai/meetings/${id}/ask`, route => route.fulfill({ json: { answer: "The review is Friday.", citations: [{ transcriptEntryId: "local-t-1", timestampSeconds: 4, text: "Friday is the review day." }] } }));
+      await page.goto(`/meetings/${id}`); await page.getByLabel("Question about this meeting").fill("When is the review?"); await page.getByRole("button", { name: "Ask", exact: true }).click();
+      await expect(page.getByText("The review is Friday.")).toBeVisible(); await expect(page.getByRole("button", { name: "0:04" })).toBeVisible();
+      await page.unroute(`**/api/local-ai/meetings/${id}/ask`); await page.route(`**/api/local-ai/meetings/${id}/ask`, route => route.fulfill({ status: 503, json: { error: "Local AI is unavailable. Make sure Ollama is running, then try again." } }));
+      await page.getByRole("button", { name: "What decisions were made?" }).click(); await expect(page.getByText(/Local AI is unavailable/)).toBeVisible();
+      await page.getByLabel("Question about this meeting").fill(""); await page.getByRole("button", { name: "Ask", exact: true }).click(); await expect(page.getByText("Enter a question about this meeting.")).toBeVisible();
+    } finally { await rm(path.join(meetingDir, `${id}.json`), { force: true }); }
+  });
 });

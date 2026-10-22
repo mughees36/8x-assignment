@@ -1,26 +1,29 @@
-# Product decisions
+# Product and architecture decisions
 
-## Prioritization
+## Trust model
 
-The assignment prioritizes the post-meeting loop: find a conversation, understand what happened, return to evidence, and move commitments forward. That makes search, transcript navigation, multiple summary lenses, persistent actions, personal highlights, and trustworthy sharing higher-value than broad settings or decorative dashboard modules. Accessibility and responsive behavior are treated as product requirements, not cleanup work.
+Seeded meetings are deterministic demo fixtures with stable public URLs. Recorded meetings are private server files addressed by validated local IDs. Public local shares are explicit, immutable snapshots addressed only by a random 256-bit bearer token. Opening a meeting or share dialog writes nothing; **Create public link** performs the privacy transition. Public audio first validates the token/snapshot before locating media. Tokens are fixed-length base64url and JSON writes use mode `0600`, sync, and atomic rename.
 
-## Why recording infrastructure is excluded
+There is no share expiry/authentication. Storage-level revocation exists, but the current UI does not expose it. A production build needs authenticated share management, audit history, expiry, and authorization on every private meeting route.
 
-Real recording requires calendar and conferencing integrations, consent UX, durable media storage, ingestion queues, transcription, speaker diarization, retry behavior, security controls, retention policy, and operational monitoring. A superficial implementation would create misleading product claims while contributing little to evaluation of the core workflow. This prototype therefore starts after ingestion, uses explicit fictional data, and labels the short sample media honestly.
+## Local processing and Q&A boundary
 
-## Long meeting handling
+Native dependencies and Ollama run with the Next.js server on one trusted host. The browser records/uploads media but never contacts Ollama, reads paths, or executes tools. Ollama must be loopback. Stable API errors prevent process output, internal exceptions, and paths crossing the boundary.
 
-Long conversations need fast movement between compressed understanding and primary evidence. The product provides summary templates, extracted decisions and actions, full-text transcript search, timestamp links, and optional transcript auto-scroll. Transcript panels have a bounded height so the page remains navigable. At production scale, transcript virtualization, server-side indexed search, chapter generation, and progressive loading would keep multi-hour meetings responsive.
+Processing retains original media, converts a WAV, transcribes timestamped segments, requests schema-constrained intelligence, validates it, and atomically publishes the meeting. Failures preserve stage/media for retry. There is no distributed queue, lock, quota, retention worker, or malware scanning.
 
-The simulated meeting timeline is intentionally preserved even though the sample video is much shorter. Seeking occurs only when a timestamp exists in the actual media; otherwise the transcript scrolls and the interface explains why playback did not move. Public clip views show nearby transcript context when a short media range contains no simulated transcript line.
+Q&A reloads the persisted transcript instead of accepting browser evidence. Questions are 1–500 trimmed characters; temperature is zero; output must match `{answer, sourceIndexes}`. An answer is surfaced only with indexes that resolve to real transcript segments, and the API returns server-derived timestamp/text citations. Empty evidence is replaced with fixed no-evidence copy. This structurally grounds citations but does not prove sentence-level entailment. Production needs retrieval/chunking, injection defenses, rate limits, observability, and evals.
 
-## Future work
+## Media, clips, and recovery
 
-1. Add authenticated workspaces, role-based access, and revocable share links.
-2. Replace seeded data with an ingestion pipeline and durable database.
-3. Add collaborative action assignment, reminders, comments, and audit history.
-4. Index transcripts for typo-tolerant search, ranking, and saved queries.
-5. Virtualize long transcripts and generate semantic chapters.
-6. Store clips as share records with expiry, permissions, and analytics.
-7. Add tested captions, downloadable transcripts, and richer screen-reader announcements.
-8. Add visual regression and accessibility automation alongside behavioral e2e coverage.
+Private and public audio have separate endpoints and a shared single-range parser. Valid normal/open/suffix ranges return `200`/`206`; malformed, multi-range, empty, and unsatisfiable requests return `416`. Paths never appear in responses.
+
+Clip bounds must be finite, ordered, nonnegative, and within snapshot duration. The client seeks at metadata load, restarts at the start if needed, and pauses at the end. Seeded media retains its disclosure because its simulated timeline exceeds the short CC0 sample.
+
+Microphone permission follows a named user action; the live room never fabricates interim text. Q&A offers keyboard submit, examples, loading, empty/unavailable/timeout/invalid-output states, and citation buttons that open transcript evidence. If readiness fails, correct the dependency and retry; if speech is absent, fail rather than invent content.
+
+## Production boundary
+
+The UI, validation, atomic metadata, and privacy routing are strong prototype foundations. Production requires authenticated tenants, durable object/database storage, encryption/key management, consent/retention policy, idempotent workers, diarization, share management, abuse controls, backups, metrics, and deployment-specific AI infrastructure. Serverless platforms generally cannot persist `.data` or reach an end user’s loopback Ollama.
+
+Automated checks use synthetic fixture files and mocked AI responses. They do not claim physical microphone testing, real Whisper/Ollama quality evaluation, a codec matrix, or public deployment validation.

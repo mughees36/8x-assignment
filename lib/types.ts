@@ -85,3 +85,21 @@ export type MeetingPreferences = {
   playbackRates: Record<string, number>;
   lastViewedMeetingId?: string;
 };
+
+export type MeetingAnswerCitation = {
+  transcriptEntryId: string;
+  timestampSeconds: number;
+  text: string;
+};
+
+export type MeetingAnswer = {
+  answer: string;
+  citations: MeetingAnswerCitation[];
+};
+
+export type LocalShareSnapshot = {
+  version: 1;
+  token: string;
+  createdAt: string;
+  meeting: Meeting;
+};

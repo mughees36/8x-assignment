@@ -1,82 +1,56 @@
 # 8xCareers Meeting Intelligence
 
-A polished, Fathom-inspired meeting intelligence product built for exploring, understanding, and acting on workplace conversations. The application turns fictional meeting data into searchable transcripts, structured summaries, decisions, highlights, and persistent action workflows.
+A Fathom-inspired Next.js 15 app for browser recording, local Whisper/Ollama processing, grounded meeting Q&A, and explicit read-only sharing. Ten deterministic fictional meetings remain usable without local AI.
 
-## Feature matrix
+## Features and architecture
 
-| Area | Capabilities |
+- Searchable meetings, summaries, transcripts, actions, highlights, playback, responsive navigation, and stable seeded shares.
+- Explicit microphone recording followed by FFmpeg conversion, `whisper.cpp` transcription, Ollama structured extraction, progress/failure state, and retry.
+- **Ask this meeting** for local recordings. The browser calls this app only; the server reloads the saved transcript, calls loopback Ollama with a JSON schema, validates with Zod, and resolves 1–5 citations to real saved segments. Unsupported questions return a fixed no-evidence answer.
+- Local recordings are private by default. Pressing **Create public link** creates a 256-bit random, path-safe token and an immutable snapshot under `.data/shares`. A raw local meeting ID never resolves publicly. Token-backed public audio supports validated byte ranges and works without `localStorage`.
+- Clip URLs validate bounds against duration, seek to the start, stop at the end, and show transcript context.
+
+Next.js server routes own filesystem/native/AI access. The browser never receives a filesystem path or calls Ollama. Seeded data lives in `lib/meetings.ts`; local state lives under ignored `.data`.
+
+## Setup and installed defaults
+
+Use Node.js 20+ and pnpm. Local intelligence also needs tools/models installed separately; this repository does not install or download them.
+
+| Environment variable | Installed default |
 | --- | --- |
-| Dashboard | Product entry points and recent meetings |
-| Meetings | Full-text search, source/topic filters, personal/starred scopes, four sort modes, persisted stars, and responsive list views |
-| Meeting detail | Native media player, speed/volume/seek controls, searchable transcript, timestamp navigation, auto-scroll, template-based summaries, decisions, highlights, and due-dated actions |
-| Actions | Pending/completed views, owners, due dates, and local persistence shared with meeting detail |
-| Highlights | Seeded insights plus create, navigate to, and delete personal highlights |
-| Search | Cross-entity search over meetings, participants, transcripts, decisions, actions, and highlights |
-| Sharing | Public meeting routes, bounded clip URLs, transcript context, and explicit demo-media disclosure |
-| Responsive UI | Desktop sidebar and mobile bottom navigation with keyboard-visible focus states and semantic labels |
-
-## Architecture
-
-The project uses Next.js 15 App Router, React 19, TypeScript, and Tailwind CSS. Routes under `app/` compose reusable client components; `lib/meetings.ts` is the typed seeded domain layer; and `lib/storage.ts` isolates browser persistence. Meeting detail routes are statically generated. Public shares resolve from stable meeting IDs and URL parameters, so no backend is required for the assignment demo.
-
-State that represents user interaction—stars, completed actions, and personal highlights—is stored in `localStorage`. Seeded meeting intelligence stays server-readable and deterministic. Playwright runs the product through its public UI at desktop and mobile breakpoints.
-
-## Setup
-
-Requirements: Node.js 20+ and pnpm.
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` (loopback required) |
+| `OLLAMA_MODEL` | `llama3.2:3b` |
+| `OLLAMA_ASK_TIMEOUT_MS` | `30000` |
+| `FFMPEG_PATH` | `/opt/homebrew/bin/ffmpeg` |
+| `WHISPER_CLI_PATH` | `/opt/homebrew/bin/whisper-cli` |
+| `WHISPER_MODEL_PATH` | `.local-ai/models/ggml-small.en.bin` |
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The repository already declares all required dependencies; no services or environment variables are needed.
+Start Ollama and ensure the configured model is present. Open `http://localhost:3000`, choose **New meeting**, enter a title, explicitly grant microphone permission, and start. Ending uploads the encoded audio and begins processing. Permission is never requested on load.
 
-## Testing
+Pipeline: `MediaRecorder` → `.data/recordings/{id}/original.media` → FFmpeg 16 kHz mono WAV → whisper.cpp timestamped JSON → Ollama schema-constrained intelligence → `.data/meetings/{id}.json`. Jobs live in `.data/jobs`. JSON uses a synced temporary file and atomic rename. Original media is retained after failure so **Retry processing** can recover after dependency fixes. Silence, permissions, codecs, and unavailable tools produce honest failures.
+
+Sharing stores `.data/shares/{token}.json`; the snapshot does not change if the private meeting changes. Possession of the URL grants access: this demo has no authentication or expiry. Storage supports revocation, but no management UI/API is exposed. Private/public media endpoints accept one full, open, or suffix Range and return `416` for malformed/unsatisfiable ranges.
+
+## Checks
 
 ```bash
 pnpm lint
 pnpm typecheck
-pnpm test:e2e
 pnpm build
+pnpm test:e2e
 ```
 
-The Playwright suite covers navigation, meeting discovery, search/filter/sort, detail/player semantics, transcript behavior, summary templates, action persistence, highlight lifecycle, sharing, clip context, and responsive navigation. Tests deliberately assert player state and controls rather than treating browser autoplay as proof of playback.
+Playwright covers seeded desktop/mobile workflows, recording lifecycle, private-by-default routing, explicit share creation, fresh-context access, clip boundaries, grounded Q&A citations, empty questions, and unavailable AI. Media events are synthetic in tests; they do not prove physical microphone capture.
 
-## Deployment
+## Deployment, privacy, and limits
 
-The app can be deployed as a standard Next.js project on Vercel or another Node-compatible host:
+Seeded features can run on a normal Node host. Local processing requires a trusted single-machine server, persistent writable storage, native processes, loopback Ollama, and installed models. Typical serverless hosting has ephemeral storage and cannot reach a user laptop’s Ollama, so local processing/sharing is not production-deployable there as written. Back up `.data` before migration. To invalidate a link today, remove only its matching `.data/shares/{token}.json` while stopped.
 
-1. Import the repository.
-2. Use the detected `pnpm build` command.
-3. Deploy without environment variables.
+Strong prototype foundations include server-only AI, loopback enforcement, bounded inputs, Zod schemas, safe IDs/tokens, atomic metadata, evidence-resolved citations, and hardened Range behavior. Demo-only tradeoffs include no auth/tenants, bearer links without expiry, local filesystem storage, no durable queue/locking/monitoring, one generic speaker, no long-transcript retrieval, and no transcript virtualization. Physical microphone and public deployment tests were not run for this milestone.
 
-No `vercel.json` is necessary because the framework defaults cover the application.
-
-## Screenshots
-
-### Meetings library
-
-![Meetings library](docs/screenshots/meetings-desktop.png)
-
-### Meeting intelligence workspace
-
-![Meeting detail](docs/screenshots/meeting-detail-desktop.png)
-
-### Mobile meeting view
-
-![Mobile meeting detail](docs/screenshots/meeting-detail-mobile.png)
-
-## Demo data and media
-
-All meetings, people, summaries, transcripts, decisions, action items, and highlights are fictional. “Product Launch Planning” represents a simulated 62-minute conversation. The native player uses MDN’s public CC0 `flower.mp4` asset as a short playback sample; it is not a recording of the simulated meeting. Both private and public views disclose that transcript timestamps may be outside the sample media, and transcript navigation never remaps those timestamps.
-
-## Limitations and tradeoffs
-
-- Persistence is browser-local, not synchronized across devices or users.
-- Sharing URLs model product behavior but are not access-controlled or backed by stored share records.
-- Media availability depends on the remote MDN sample; transcript and summary workflows remain useful if it fails.
-- The data layer is intentionally seeded and read-only; recording, ingestion, transcription, authentication, and collaboration infrastructure are outside assignment scope.
-- Long transcripts are rendered in a bounded scrolling region but are not yet virtualized.
-
-See [docs/product-decisions.md](docs/product-decisions.md) for prioritization and future-work rationale.
+See [docs/product-decisions.md](docs/product-decisions.md).

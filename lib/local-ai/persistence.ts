@@ -1,13 +1,18 @@
 import "server-only";
 import { mkdir, open, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { Meeting, ProcessingJob } from "@/lib/types";
+import type { LocalShareSnapshot, Meeting, ProcessingJob } from "@/lib/types";
 import { localAISettings } from "@/lib/local-ai/settings";
 
 const SAFE_ID = /^[a-z0-9][a-z0-9-]{7,80}$/;
+const SAFE_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 export function assertSafeId(id: string) {
   if (!SAFE_ID.test(id)) throw new Error("Invalid identifier");
   return id;
+}
+export function assertSafeShareToken(token: string) {
+  if (!SAFE_TOKEN.test(token)) throw new Error("Invalid share token");
+  return token;
 }
 
 function withinData(...parts: string[]) {
@@ -49,6 +54,24 @@ export async function saveJob(job: ProcessingJob) { await atomicJson(withinData(
 export async function getJob(id: string) { return readJson<ProcessingJob>(withinData("jobs", `${assertSafeId(id)}.json`)); }
 export async function saveMeeting(meeting: Meeting) { await atomicJson(withinData("meetings", `${assertSafeId(meeting.id)}.json`), meeting); }
 export async function getLocalMeeting(id: string) { return readJson<Meeting>(withinData("meetings", `${assertSafeId(id)}.json`)); }
+
+export async function createShareSnapshot(meeting: Meeting) {
+  if (meeting.origin !== "local-recording") throw new Error("Only local meetings require snapshots");
+  const token = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  const snapshot: LocalShareSnapshot = { version: 1, token, createdAt: new Date().toISOString(), meeting: structuredClone(meeting) };
+  await atomicJson(withinData("shares", `${assertSafeShareToken(token)}.json`), snapshot);
+  return snapshot;
+}
+
+export async function getShareSnapshot(token: string) {
+  return readJson<LocalShareSnapshot>(withinData("shares", `${assertSafeShareToken(token)}.json`));
+}
+
+export async function revokeShareSnapshot(token: string) {
+  const { unlink } = await import("node:fs/promises");
+  try { await unlink(withinData("shares", `${assertSafeShareToken(token)}.json`)); return true; }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; }
+}
 
 export async function listLocalMeetings(): Promise<Meeting[]> {
   const directory = withinData("meetings");
