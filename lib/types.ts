@@ -36,6 +36,28 @@ export type Meeting = {
   decisions: Insight[];
   actionItems: Insight[];
   highlights: Insight[];
+  summaries: SummaryTemplates;
+  mediaUrl: string;
+};
+
+export type SummaryContent = {
+  overview: string;
+  keyPoints: string[];
+  decisions: string[];
+  risks: string[];
+  nextSteps: string[];
+  actionItems: string[];
+};
+
+export type SummaryTemplateName = "General" | "Executive Brief" | "Action-Focused";
+export type SummaryTemplates = Record<SummaryTemplateName, SummaryContent>;
+
+export type UserHighlight = {
+  id: string;
+  meetingId: string;
+  title: string;
+  timestampSeconds: number;
+  createdAt: string;
 };
 
 export type MeetingPreferences = {

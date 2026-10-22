@@ -52,7 +52,7 @@ const genericTranscript = (ids: string[], topic: string): TranscriptEntry[] => [
   { id: `${topic}-3`, speakerId: ids[2] ?? ids[0], startSeconds: 811, text: "I’ll own the follow-up and share a written recommendation with the team tomorrow." },
 ];
 
-const baseMeetings: Omit<Meeting, "transcript" | "decisions" | "actionItems" | "highlights">[] = [
+const baseMeetings: Omit<Meeting, "transcript" | "decisions" | "actionItems" | "highlights" | "summaries" | "mediaUrl">[] = [
   { id: "product-launch-planning", title: "Product Launch Planning", date: "2026-10-21T15:00:00Z", durationSeconds: 3720, participants: people.slice(0, 8), summary: "The team aligned on an October 12 launch for talent teams, confirmed a no-card Pro trial, and made security sign-off the sole go/no-go gate.", tags: ["Launch", "Product", "Go-to-market"], status: "ready", source: "Zoom" },
   { id: "customer-discovery", title: "Customer Discovery", date: "2026-10-20T17:00:00Z", durationSeconds: 2040, participants: [people[4], people[8], people[7]], summary: "A design partner shared how recruiting teams review interview notes and where handoffs currently break down.", tags: ["Customer", "Research"], status: "ready", source: "Zoom" },
   { id: "engineering-standup", title: "Engineering Standup", date: "2026-10-19T10:00:00Z", durationSeconds: 720, participants: [people[2], people[7], people[0], people[3], people[5]], summary: "The team surfaced launch blockers, confirmed owners, and aligned on the day’s integration work.", tags: ["Engineering", "Daily"], status: "ready", source: "Google Meet" },
@@ -67,6 +67,7 @@ const baseMeetings: Omit<Meeting, "transcript" | "decisions" | "actionItems" | "
 
 export const meetings: Meeting[] = baseMeetings.map((meeting) => ({
   ...meeting,
+  mediaUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
   transcript: meeting.id === "product-launch-planning" ? launchTranscript : genericTranscript(meeting.participants.map((person) => person.id), meeting.id),
   decisions: meeting.id === "product-launch-planning" ? [
     { id: "d1", text: "Launch on Tuesday the 12th at 9:00 AM Eastern.", timestampSeconds: 3138 },
@@ -85,6 +86,32 @@ export const meetings: Meeting[] = baseMeetings.map((meeting) => ({
     { id: "h2", text: "Northstar Labs reports four recruiter hours saved each week.", timestampSeconds: 1658 },
     { id: "h3", text: "Speaker identification reached 94% on the English test set.", timestampSeconds: 526 },
   ] : [{ id: `${meeting.id}-h`, text: meeting.summary, timestampSeconds: 384 }],
+  summaries: {
+    General: {
+      overview: meeting.summary,
+      keyPoints: ["The group aligned on the primary outcome and audience.", "Customer evidence shaped the recommendation.", "Owners and follow-up timing were made explicit."],
+      decisions: ["Proceed with the focused recommendation discussed by the team."],
+      risks: ["Dependencies and final review timing could affect delivery."],
+      nextSteps: ["Share the written recap and validate the remaining dependency."],
+      actionItems: ["Owner to circulate the follow-up by the next business day."],
+    },
+    "Executive Brief": {
+      overview: `Leadership brief: ${meeting.summary}`,
+      keyPoints: ["Strategic focus is narrower and easier to communicate.", "The evidence supports moving forward with a measured rollout."],
+      decisions: ["Maintain the chosen scope and success criteria."],
+      risks: ["Execution confidence depends on clearing the final operational gate."],
+      nextSteps: ["Confirm readiness, then communicate the decision across teams."],
+      actionItems: ["Executive owner to review status at the next checkpoint."],
+    },
+    "Action-Focused": {
+      overview: `Execution plan: ${meeting.summary}`,
+      keyPoints: ["Work is organized around named owners.", "The immediate priority is removing the remaining blocker."],
+      decisions: ["Use the agreed plan as the source of truth."],
+      risks: ["Late handoffs may compress validation time."],
+      nextSteps: ["Complete assigned work, post evidence, and escalate blockers early."],
+      actionItems: meeting.id === "product-launch-planning" ? ["Priya: complete the security review by Friday.", "Owen: publish the dashboard by Monday.", "Jonah: deliver the competitive one-pager.", "Imani: run the support simulation."] : ["Share the written follow-up tomorrow."],
+    },
+  },
 }));
 
 export function getMeeting(id: string) {

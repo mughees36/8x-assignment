@@ -3,6 +3,7 @@ node_modules
 out
 .DS_Store
 *.log
+*.tsbuildinfo
 .vercel
 .pnpm-store
 next-env.d.ts

@@ -1,5 +1,0 @@
-import { Bell, Globe2, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-
-export default function SettingsPage() { return <div className="max-w-3xl"><h1 className="text-3xl font-semibold tracking-[-.04em]">Settings</h1><p className="mt-2 text-sm text-[#6f7c74]">Manage your meeting intelligence workspace.</p><Card className="mt-8 divide-y">{[[Globe2,"Meeting defaults","English (US) · Auto-record external calls"],[Bell,"Notifications","Action item reminders · Weekly digest"],[ShieldCheck,"Privacy & retention","Workspace-only sharing · 12-month retention"]].map(([Icon,title,description]) => { const I = Icon as typeof Globe2; return <div key={String(title)} className="flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-xl bg-[#eff4ef] text-moss-700"><I size={18}/></span><span className="flex-1"><strong className="block text-sm">{String(title)}</strong><span className="mt-1 block text-xs text-[#77837b]">{String(description)}</span></span><Button variant="outline" size="sm">Edit</Button></div>; })}</Card></div>; }
