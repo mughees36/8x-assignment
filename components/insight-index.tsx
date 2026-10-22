@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
 import { CheckCircle2, Circle, Highlighter, Trash2 } from "lucide-react";
-import { meetings } from "@/lib/meetings";
+import type { Meeting } from "@/lib/types";
 import { actionKey, loadCompletedActions, loadUserHighlights, saveCompletedActions, saveUserHighlights } from "@/lib/storage";
-import { formatTimestamp } from "@/lib/utils";
+import { formatDueDate, formatTimestamp } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
-export function InsightIndex({ type }: { type: "highlights" | "actions" }) {
+export function InsightIndex({ type, meetings }: { type: "highlights" | "actions"; meetings: Meeting[] }) {
   const actions = type === "actions";
   const [completed, setCompleted] = useState<string[]>([]);
   const [users, setUsers] = useState<ReturnType<typeof loadUserHighlights>>([]);
@@ -48,7 +47,7 @@ export function InsightIndex({ type }: { type: "highlights" | "actions" }) {
     <h2 className="mt-8 text-sm font-semibold">{actions ? (filter === "pending" ? "Pending" : "Completed") : "Suggested highlights"}</h2>
     <div className="mt-3 grid gap-3 lg:grid-cols-2">{visible.map(({ meeting, insight, key }) => <Card key={key} className="flex items-start gap-3 p-4">
       {actions ? <button onClick={() => toggle(key)} aria-label={`${completed.includes(key) ? "Mark pending" : "Mark complete"}: ${insight.text}`}>{completed.includes(key) ? <CheckCircle2 size={18} className="text-moss-600"/> : <Circle size={18}/>}</button> : <Highlighter aria-hidden="true" size={17} className="text-[#956b18]"/>}
-      <Link href={`/meetings/${meeting.id}?t=${insight.timestampSeconds}`} className="min-w-0 flex-1"><p className={`text-sm leading-6 ${completed.includes(key) ? "text-[#89948d] line-through" : ""}`}>{insight.text}</p><span className="mt-2 block text-xs text-[#7b8780]">{meeting.title} · {actions && insight.owner ? `${insight.owner} · ` : ""}{actions && insight.dueDate ? `Due ${format(parseISO(insight.dueDate), "MMM d, yyyy")} · ` : ""}{formatTimestamp(insight.timestampSeconds)}</span></Link>
+      <Link href={`/meetings/${meeting.id}?t=${insight.timestampSeconds}`} className="min-w-0 flex-1"><p className={`text-sm leading-6 ${completed.includes(key) ? "text-[#89948d] line-through" : ""}`}>{insight.text}</p><span className="mt-2 block text-xs text-[#7b8780]">{meeting.title} · {actions && insight.owner ? `${insight.owner} · ` : ""}{actions && insight.dueDate ? `Due ${formatDueDate(insight.dueDate)} · ` : ""}{formatTimestamp(insight.timestampSeconds)}</span></Link>
     </Card>)}{visible.length === 0 && <p role="status" className="col-span-full rounded-2xl border bg-white py-12 text-center text-sm text-[#7b8780]">No {filter} action items.</p>}</div>
   </div>;
 }

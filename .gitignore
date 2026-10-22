@@ -8,4 +8,6 @@ out
 .pnpm-store
 playwright-report
 test-results
+.data
+.local-ai
 next-env.d.ts

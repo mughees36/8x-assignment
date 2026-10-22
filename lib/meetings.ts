@@ -52,7 +52,7 @@ const genericTranscript = (ids: string[], topic: string): TranscriptEntry[] => [
   { id: `${topic}-3`, speakerId: ids[2] ?? ids[0], startSeconds: 811, text: "I’ll own the follow-up and share a written recommendation with the team tomorrow." },
 ];
 
-const baseMeetings: Omit<Meeting, "transcript" | "decisions" | "actionItems" | "highlights" | "summaries" | "mediaUrl">[] = [
+const baseMeetings: Omit<Meeting, "origin" | "transcript" | "decisions" | "actionItems" | "highlights" | "summaries" | "mediaUrl">[] = [
   { id: "product-launch-planning", title: "Product Launch Planning", date: "2026-10-21T15:00:00Z", durationSeconds: 3720, participants: people.slice(0, 8), summary: "The team aligned on an October 12 launch for talent teams, confirmed a no-card Pro trial, and made security sign-off the sole go/no-go gate.", tags: ["Launch", "Product", "Go-to-market"], status: "ready", source: "Zoom" },
   { id: "customer-discovery", title: "Customer Discovery", date: "2026-10-20T17:00:00Z", durationSeconds: 2040, participants: [people[4], people[8], people[7]], summary: "A design partner shared how recruiting teams review interview notes and where handoffs currently break down.", tags: ["Customer", "Research"], status: "ready", source: "Zoom" },
   { id: "engineering-standup", title: "Engineering Standup", date: "2026-10-19T10:00:00Z", durationSeconds: 720, participants: [people[2], people[7], people[0], people[3], people[5]], summary: "The team surfaced launch blockers, confirmed owners, and aligned on the day’s integration work.", tags: ["Engineering", "Daily"], status: "ready", source: "Google Meet" },
@@ -67,6 +67,7 @@ const baseMeetings: Omit<Meeting, "transcript" | "decisions" | "actionItems" | "
 
 export const meetings: Meeting[] = baseMeetings.map((meeting) => ({
   ...meeting,
+  origin: "seeded",
   mediaUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
   transcript: meeting.id === "product-launch-planning" ? launchTranscript : genericTranscript(meeting.participants.map((person) => person.id), meeting.id),
   decisions: meeting.id === "product-launch-planning" ? [

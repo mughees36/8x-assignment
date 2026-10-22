@@ -19,9 +19,11 @@ export type Insight = {
   timestampSeconds: number;
   owner?: string;
   dueDate?: string;
+  supportingTranscript?: string;
 };
 
 export type MeetingStatus = "ready" | "processing";
+export type MeetingOrigin = "seeded" | "local-recording";
 
 export type Meeting = {
   id: string;
@@ -32,13 +34,30 @@ export type Meeting = {
   summary: string;
   tags: string[];
   status: MeetingStatus;
-  source: "Zoom" | "Google Meet" | "Microsoft Teams";
+  origin: MeetingOrigin;
+  source: "Zoom" | "Google Meet" | "Microsoft Teams" | "Local recording";
   transcript: TranscriptEntry[];
   decisions: Insight[];
   actionItems: Insight[];
   highlights: Insight[];
   summaries: SummaryTemplates;
   mediaUrl: string;
+  audio?: { mimeType: string; originalFileName: string };
+};
+
+export const processingStages = ["saving-recording", "transcribing-audio", "generating-summary", "extracting-action-items", "preparing-workspace", "complete"] as const;
+export type ProcessingStage = (typeof processingStages)[number];
+export type ProcessingJobStatus = "processing" | "complete" | "failed";
+export type ProcessingJob = {
+  id: string;
+  meetingId: string;
+  title: string;
+  status: ProcessingJobStatus;
+  stage: ProcessingStage;
+  createdAt: string;
+  updatedAt: string;
+  error?: string;
+  audioMimeType?: string;
 };
 
 export type SummaryContent = {

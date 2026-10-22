@@ -12,7 +12,7 @@ test("dashboard and meetings provide complete navigation", async ({ page }) => {
   await page.getByRole("link", { name: "Review meetings Catch up with summaries and transcripts" }).click();
   await expect(page).toHaveURL(/\/meetings$/);
   await expect(page.getByRole("heading", { name: "Meetings" })).toBeVisible();
-  await expect(page.getByText("10", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open Product Launch Planning" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recruiting Intelligence Demo" })).toBeVisible();
 });
 
@@ -119,4 +119,52 @@ test("desktop uses sidebar while mobile uses bottom navigation", async ({ page }
     await expect(desktopNav).toBeVisible();
     await expect(mobileNav).toBeHidden();
   }
+});
+
+test("local meeting setup requests permission only after an explicit action", async ({ page }) => {
+  let microphoneRequests = 0;
+  await page.route("**/api/local-ai/status", (route) => route.fulfill({ json: { ready: true, localOnly: true, message: "Ready for test media.", deploymentNotice: "Local only.", checks: { ffmpeg: { ready: true, detail: "test" }, whisper: { ready: true, detail: "test" }, model: { ready: true, detail: "test" }, ollama: { ready: true, detail: "test" } } } }));
+  await page.exposeFunction("noteMicRequest", () => { microphoneRequests += 1; });
+  await page.addInitScript(() => {
+    const track = { stop() {}, enabled: true };
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+      getUserMedia: async () => { await (window as unknown as { noteMicRequest: () => void }).noteMicRequest(); return { getTracks: () => [track], getAudioTracks: () => [track] }; },
+      enumerateDevices: async () => [{ kind: "audioinput", deviceId: "fake-mic", label: "Playwright fake microphone", groupId: "fake", toJSON() { return this; } }],
+    } });
+    Object.defineProperty(window, "MediaRecorder", { configurable: true, value: class { static isTypeSupported() { return true; } } });
+  });
+  await page.goto("/meetings/new");
+  await expect(page.getByRole("button", { name: "Start Meeting" })).toBeDisabled();
+  expect(microphoneRequests).toBe(0);
+  await page.getByLabel("Meeting title").fill("Browser lifecycle test");
+  await page.getByRole("button", { name: "Check microphone permission" }).click();
+  await expect(page.getByText("Microphone permission granted")).toBeVisible();
+  expect(microphoneRequests).toBe(1);
+  await expect(page.getByRole("button", { name: "Start Meeting" })).toBeEnabled();
+});
+
+test("live room records fake browser media and shows honest processing failure with retry", async ({ page }) => {
+  await page.addInitScript(() => {
+    const track = { stop() {}, enabled: true };
+    const stream = { getTracks: () => [track], getAudioTracks: () => [track] };
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: async () => stream } });
+    class FakeRecorder {
+      static isTypeSupported() { return true; } state = "inactive"; mimeType = "audio/webm"; ondataavailable: ((event: { data: Blob }) => void) | null = null; onstop: (() => void) | null = null;
+      start() { this.state = "recording"; this.ondataavailable?.({ data: new Blob(["test-audio"], { type: this.mimeType }) }); }
+      stop() { this.state = "inactive"; this.onstop?.(); }
+    }
+    class FakeAnalyser { fftSize = 0; frequencyBinCount = 8; getByteFrequencyData(array: Uint8Array) { array.fill(12); } }
+    class FakeAudioContext { createAnalyser() { return new FakeAnalyser(); } createMediaStreamSource() { return { connect() {} }; } close() { return Promise.resolve(); } }
+    Object.defineProperty(window, "MediaRecorder", { configurable: true, value: FakeRecorder });
+    Object.defineProperty(window, "AudioContext", { configurable: true, value: FakeAudioContext });
+    sessionStorage.setItem("local-meeting:session-playwright", JSON.stringify({ title: "Lifecycle meeting", deviceId: "", authorizedAt: Date.now() }));
+  });
+  await page.route("**/api/local-ai/jobs", (route) => route.fulfill({ status: 202, json: { jobId: "job-playwright1", meetingId: "local-playwright1" } }));
+  await page.route("**/api/local-ai/jobs/job-playwright1", (route) => route.fulfill({ json: { id: "job-playwright1", meetingId: "local-playwright1", title: "Lifecycle meeting", status: "failed", stage: "transcribing-audio", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), error: "Whisper test failure; original recording retained." } }));
+  await page.goto("/meetings/live/session-playwright");
+  await expect(page.getByText("No fake live transcript.")).toBeVisible();
+  await page.getByRole("button", { name: "End Meeting" }).click();
+  await expect(page.getByText("Saving recording")).toBeVisible();
+  await expect(page.getByText(/original recording retained/)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole("button", { name: "Retry processing" })).toBeVisible();
 });

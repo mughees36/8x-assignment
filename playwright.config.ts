@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const localBrowser = process.env.CI ? {} : { channel: "chrome" as const };
+const testPort = process.env.PLAYWRIGHT_PORT ?? "3000";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -10,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: `http://127.0.0.1:${testPort}`,
     ...localBrowser,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -21,8 +22,8 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["iPhone 13"], browserName: "chromium", ...localBrowser } },
   ],
   webServer: {
-    command: "pnpm dev",
-    url: "http://127.0.0.1:3000",
+    command: `pnpm dev --hostname 127.0.0.1 --port ${testPort}`,
+    url: `http://127.0.0.1:${testPort}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

@@ -1,2 +1,4 @@
 import { InsightIndex } from "@/components/insight-index";
-export default function ActionItemsPage() { return <InsightIndex type="actions" />; }
+import { getAllMeetings } from "@/lib/local-ai/meeting-store";
+export const dynamic = "force-dynamic";
+export default async function ActionItemsPage() { return <InsightIndex type="actions" meetings={await getAllMeetings()} />; }
