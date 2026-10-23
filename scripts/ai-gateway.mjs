@@ -10,9 +10,14 @@ const tickets = new Map();
 const statePath = '.data/gateway-manifest.json';
 await mkdir('.data', { recursive: true });
 let state;
-try { state = JSON.parse(await readFile(statePath, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; state = { meetings: [], jobs: [], day: '', count: 0 }; }
+try { state = JSON.parse(await readFile(statePath, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; state = { meetings: [], jobs: [], day: '', jobsUsed: 0, questions: 0 }; }
+// Older manifests counted recordings and questions together. Carry their usage
+// into the recording bucket once, so upgrading cannot silently reset a limit.
+if (!Number.isSafeInteger(state.jobsUsed) || state.jobsUsed < 0) state.jobsUsed = Number.isSafeInteger(state.count) && state.count > 0 ? state.count : 0;
+if (!Number.isSafeInteger(state.questions) || state.questions < 0) state.questions = 0;
 async function save() { await writeFile(`${statePath}.tmp`, JSON.stringify(state), { mode: 0o600 }); await rename(`${statePath}.tmp`, statePath); }
 let busy = false; let requests = 0;
+function dailyLimit(name, fallback) { const value = Number(process.env[name]); return Number.isSafeInteger(value) && value > 0 ? Math.min(value, 100) : fallback; }
 setInterval(() => { requests = 0; for (const [key, expiry] of tickets) if (expiry < Date.now()) tickets.delete(key); }, 60_000).unref();
 function authenticated(value = '') { const expected = Buffer.from(`Bearer ${secret}`); const actual = Buffer.from(value); return actual.length === expected.length && timingSafeEqual(actual, expected); }
 const server = http.createServer(async (req, res) => {
@@ -38,18 +43,21 @@ const server = http.createServer(async (req, res) => {
   const jobId = path.match(/\/jobs\/(job-[a-z0-9-]+)/)?.[1];
   const meetingId = path.match(/\/meetings\/(local-[a-z0-9-]+)/)?.[1];
   if ((jobId && !state.jobs.includes(jobId)) || (meetingId && !state.meetings.includes(meetingId))) return reply(404, { error: 'Not found' });
-  const inference = req.method === 'POST' && (path.endsWith('/jobs') || path.endsWith('/retry') || path.endsWith('/ask'));
+  const question = req.method === 'POST' && path.endsWith('/ask');
+  const inference = req.method === 'POST' && (path.endsWith('/jobs') || path.endsWith('/retry') || question);
   if (inference && busy) return reply(429, { error: 'AI host is processing another request. Retry shortly.' });
   const day = new Date().toISOString().slice(0, 10);
-  if (state.day !== day) { state.day = day; state.count = 0; }
-  if (inference && state.count >= Number(process.env.AI_GATEWAY_DAILY_JOBS || 6)) return reply(429, { error: 'Daily AI demo quota reached' });
-  if (inference) { busy = true; state.count++; }
+  if (state.day !== day) { state.day = day; state.jobsUsed = 0; state.questions = 0; state.count = 0; }
+  const quotaKey = question ? 'questions' : 'jobsUsed';
+  const quotaLimit = dailyLimit(question ? 'AI_GATEWAY_DAILY_QUESTIONS' : 'AI_GATEWAY_DAILY_JOBS', question ? 30 : 20);
+  if (inference && state[quotaKey] >= quotaLimit) return reply(429, { error: question ? 'Daily meeting question limit reached' : 'Daily recording limit reached. Your audio remains in this browser tab; retry tomorrow.' });
+  if (inference) busy = true;
   try {
-    if (inference) await save();
     const chunks = []; let size = 0; const max = upload ? 25 * 1024 * 1024 : 8192;
     for await (const chunk of req) { size += chunk.length; if (size > max) { reply(413, { error: 'Upload limit is 25 MB' }); req.destroy(); return; } chunks.push(chunk); }
     if (req.method === 'POST' && path === '/api/local-ai/jobs' && !upload) return reply(403, { error: 'Use an upload ticket' });
     if (upload && !req.headers['content-type']?.startsWith('multipart/form-data;')) return reply(415, { error: 'Expected audio form' });
+    if (inference) { state[quotaKey]++; await save(); }
     const target = new URL(path + (path === '/api/gateway-data' ? url.search : ''), upstream);
     const response = await fetch(target, { method: req.method, headers: { authorization: `Bearer ${secret}`, ...(req.headers['content-type'] ? { 'content-type': req.headers['content-type'] } : {}), ...(req.headers.range ? { range: req.headers.range } : {}) }, body: req.method === 'POST' ? Buffer.concat(chunks) : undefined, signal: AbortSignal.timeout(60_000), redirect: 'error' });
     if (path === '/api/gateway-data') {

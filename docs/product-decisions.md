@@ -4,7 +4,7 @@
 
 Vercel calls a protected Node gateway that reuses the existing processing routes through an isolated loopback Next process. Single-use direct audio upload tickets bypass serverless request body limits. Async jobs and recordings persist on the Mac, with a gateway manifest excluding existing private recordings. No external database or paid service was provisioned. Seeded meetings work independently; hosted recordings require the Mac online.
 
-The reviewer access code grants a shared demo workspace rather than per-user accounts. Explicit bearer shares allow outsiders read-only access. A single active inference and a six-request default daily quota contain demo resource use. Tailscale Funnel exposes only the authenticated gateway, while Ollama, Whisper's Next process, and storage stay on Mac loopback. A production multi-tenant product still needs user authorization, durable workers, object storage, distributed limits, and backups.
+The reviewer access code grants a shared demo workspace rather than per-user accounts. Explicit bearer shares allow outsiders read-only access. A single active inference and separate daily recording/Q&A limits contain demo resource use. Tailscale Funnel exposes only the authenticated gateway, while Ollama, Whisper's Next process, and storage stay on Mac loopback. A production multi-tenant product still needs user authorization, durable workers, object storage, distributed limits, and backups.
 
 ## Trust model
 

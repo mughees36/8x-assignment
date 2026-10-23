@@ -171,6 +171,38 @@ test("live room records fake browser media and shows honest processing failure w
   await expect(page.getByRole("button", { name: "Retry processing" })).toBeVisible();
 });
 
+test("quota upload failure keeps recorded audio in the tab for retry", async ({ page }) => {
+  await page.addInitScript(() => {
+    const track = { stop() {}, enabled: true };
+    const stream = { getTracks: () => [track], getAudioTracks: () => [track] };
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: async () => stream } });
+    class FakeRecorder {
+      static isTypeSupported() { return true; } state = "inactive"; mimeType = "audio/webm"; ondataavailable: ((event: { data: Blob }) => void) | null = null; onstop: (() => void) | null = null;
+      start() { this.state = "recording"; this.ondataavailable?.({ data: new Blob(["retained-audio"], { type: this.mimeType }) }); }
+      stop() { this.state = "inactive"; this.onstop?.(); }
+    }
+    class FakeAnalyser { fftSize = 0; frequencyBinCount = 8; getByteFrequencyData(array: Uint8Array) { array.fill(12); } }
+    class FakeAudioContext { createAnalyser() { return new FakeAnalyser(); } createMediaStreamSource() { return { connect() {} }; } close() { return Promise.resolve(); } }
+    Object.defineProperty(window, "MediaRecorder", { configurable: true, value: FakeRecorder });
+    Object.defineProperty(window, "AudioContext", { configurable: true, value: FakeAudioContext });
+    sessionStorage.setItem("local-meeting:session-upload-retry", JSON.stringify({ title: "Retry meeting", deviceId: "", authorizedAt: Date.now() }));
+  });
+  let uploads = 0;
+  await page.route("**/api/upload-ticket", (route) => route.fulfill({ json: { local: true } }));
+  await page.route("**/api/local-ai/jobs", (route) => {
+    uploads++;
+    return route.fulfill(uploads === 1 ? { status: 429, json: { error: "Daily recording limit reached" } } : { status: 202, json: { jobId: "job-uploadretry", meetingId: "local-uploadretry" } });
+  });
+  await page.route("**/api/local-ai/jobs/job-uploadretry", (route) => route.fulfill({ json: { id: "job-uploadretry", meetingId: "local-uploadretry", title: "Retry meeting", status: "failed", stage: "transcribing-audio", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), error: "Test processing stopped." } }));
+  await page.goto("/meetings/live/session-upload-retry");
+  await page.getByRole("button", { name: "End Meeting" }).click();
+  await expect(page.getByText("Daily recording limit reached")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry upload" })).toBeVisible();
+  await page.getByRole("button", { name: "Retry upload" }).click();
+  await expect.poll(() => uploads).toBe(2);
+  await expect(page.getByRole("button", { name: "Retry processing" })).toBeVisible();
+});
+
 test.describe("private local meeting intelligence", () => {
   test("local meetings require explicit token shares that work in a fresh context and enforce clip bounds", async ({ page, request, browser }, testInfo) => {
     const id = `local-playwright-${testInfo.project.name}`;
