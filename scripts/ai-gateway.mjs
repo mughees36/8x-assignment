@@ -14,7 +14,7 @@ try { state = JSON.parse(await readFile(statePath, 'utf8')); } catch (e) { if (e
 async function save() { await writeFile(`${statePath}.tmp`, JSON.stringify(state), { mode: 0o600 }); await rename(`${statePath}.tmp`, statePath); }
 let busy = false; let requests = 0;
 setInterval(() => { requests = 0; for (const [key, expiry] of tickets) if (expiry < Date.now()) tickets.delete(key); }, 60_000).unref();
-function authenticated(value = '') { const expected = `Bearer ${secret}`; return value.length === expected.length && timingSafeEqual(Buffer.from(value), Buffer.from(expected)); }
+function authenticated(value = '') { const expected = Buffer.from(`Bearer ${secret}`); const actual = Buffer.from(value); return actual.length === expected.length && timingSafeEqual(actual, expected); }
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://gateway');
   const cors = req.headers.origin === origin;
@@ -43,8 +43,9 @@ const server = http.createServer(async (req, res) => {
   const day = new Date().toISOString().slice(0, 10);
   if (state.day !== day) { state.day = day; state.count = 0; }
   if (inference && state.count >= Number(process.env.AI_GATEWAY_DAILY_JOBS || 6)) return reply(429, { error: 'Daily AI demo quota reached' });
-  if (inference) { busy = true; state.count++; await save(); }
+  if (inference) { busy = true; state.count++; }
   try {
+    if (inference) await save();
     const chunks = []; let size = 0; const max = upload ? 25 * 1024 * 1024 : 8192;
     for await (const chunk of req) { size += chunk.length; if (size > max) { reply(413, { error: 'Upload limit is 25 MB' }); req.destroy(); return; } chunks.push(chunk); }
     if (req.method === 'POST' && path === '/api/local-ai/jobs' && !upload) return reply(403, { error: 'Use an upload ticket' });

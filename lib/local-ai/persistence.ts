@@ -55,6 +55,7 @@ export async function saveJob(job: ProcessingJob) { await atomicJson(withinData(
 export async function getJob(id: string) { return readJson<ProcessingJob>(withinData("jobs", `${assertSafeId(id)}.json`)); }
 export async function saveMeeting(meeting: Meeting) { await atomicJson(withinData("meetings", `${assertSafeId(meeting.id)}.json`), meeting); }
 export async function getLocalMeeting(id: string): Promise<Meeting | undefined> {
+  if (process.env.VERCEL && !remoteAI) return undefined;
   if (remoteAI) { if (!(await demoAuthorized())) return undefined; try { const r = await backendFetch(`/api/gateway-data?id=${assertSafeId(id)}`); return r.ok ? await r.json() || undefined : undefined; } catch { return undefined; } }
   return readJson<Meeting>(withinData("meetings", `${assertSafeId(id)}.json`));
 }
@@ -68,6 +69,7 @@ export async function createShareSnapshot(meeting: Meeting) {
 }
 
 export async function getShareSnapshot(token: string) {
+  if (process.env.VERCEL && !remoteAI) return undefined;
   if (remoteAI) { try { const r = await backendFetch(`/api/gateway-data?share=${assertSafeShareToken(token)}`); return r.ok ? await r.json() as LocalShareSnapshot | undefined : undefined; } catch { return undefined; } }
   return readJson<LocalShareSnapshot>(withinData("shares", `${assertSafeShareToken(token)}.json`));
 }
@@ -79,6 +81,7 @@ export async function revokeShareSnapshot(token: string) {
 }
 
 export async function listLocalMeetings(): Promise<Meeting[]> {
+  if (process.env.VERCEL && !remoteAI) return [];
   if (remoteAI) { if (!(await demoAuthorized())) return []; try { const r = await backendFetch('/api/gateway-data'); return r.ok ? await r.json() : []; } catch { return []; } }
   const directory = withinData("meetings");
   try {

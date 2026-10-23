@@ -181,7 +181,14 @@ export async function processJob(jobId: string) {
       participants: [{ id: "speaker", name: "Speaker", role: "Recorded locally", initials: "S", color: "#245c45" }],
       summary: result.general.overview, tags: ["Local AI"], status: "ready", origin: "local-recording", source: "Local recording",
       transcript: parsed.entries,
-      decisions: insights(result.decisions, "decision", parsed.entries).filter((item) => hasDecisionEvidence(item, parsed.entries)),
+      decisions: (() => {
+        const extracted = insights(result.decisions, "decision", parsed.entries).filter((item) => hasDecisionEvidence(item, parsed.entries));
+        // Preserve explicit decisions verbatim if the small model omits them.
+        for (const entry of parsed.entries) {
+          if (/\b(?:we decided|we agreed|decision is|approved the)\b/i.test(entry.text) && !extracted.some(item => item.timestampSeconds === entry.startSeconds)) extracted.push({ id: `decision-source-${entry.id}`, text: entry.text, timestampSeconds: entry.startSeconds });
+        }
+        return extracted;
+      })(),
       actionItems: insights(result.actions, "action", parsed.entries).filter((item) => hasActionEvidence(item, parsed.entries)),
       highlights: insights(result.highlights, "highlight", parsed.entries).filter((item) => hasHighlightEvidence(item, parsed.entries)),
       summaries: templates(result),

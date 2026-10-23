@@ -8,6 +8,7 @@ async function readable(file: string, executable = false) {
 }
 
 export async function getReadiness() {
+  if (process.env.VERCEL && !remoteAI) return { ready: false, localOnly: false, message: 'The AI host is not connected. Seeded meetings remain available.', deploymentNotice: 'Live recording is unavailable until the protected gateway is connected.', checks: { gateway: { ready: false, detail: 'Gateway not configured' } } };
   if (remoteAI) {
     try { const response = await backendFetch('/api/local-ai/status'); if (response.ok) { const status = await response.json(); return { ...status, localOnly: false, message: status.ready ? 'The local AI host is online. Recording requires a demo access code.' : 'The local AI host is not ready.', deploymentNotice: 'Audio uploads directly to the protected AI host. Code holders share a demo workspace. Seeded meetings remain available when the host is offline.' }; } } catch {}
     return { ready: false, localOnly: false, message: 'The AI host is offline. Seeded meetings remain available.', deploymentNotice: 'Start the local services and gateway to enable recording.', checks: { gateway: { ready: false, detail: 'Gateway unreachable' } } };

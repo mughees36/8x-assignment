@@ -7,3 +7,4 @@ export async function POST(request: Request) {
   response.cookies.set("ai-demo", demoToken(), { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", maxAge: 3600, path: "/" });
   return response;
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

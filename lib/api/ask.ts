@@ -18,3 +18,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Unable to answer this question." }, { status: 400 });
   }
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

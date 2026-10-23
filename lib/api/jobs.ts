@@ -23,3 +23,4 @@ export async function POST(request: NextRequest) {
   void processJob(jobId);
   return NextResponse.json({ jobId, meetingId }, { status: 202 });
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

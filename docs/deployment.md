@@ -2,7 +2,13 @@
 
 Repository: https://github.com/mughees36/8x-assignment
 
-Production URL: pending approval and Vercel authentication. No tunnel or deployment has been published.
+Production URL: https://8x-assignment-theta.vercel.app (unauthenticated seeded demo verified).
+
+GitHub push and Vercel deployment were approved and completed. Cloudflare quick-tunnel creation timed out three times, including HTTP/2 and IPv4 attempts; no public AI connection is claimed. Credentials exist privately under `.data/gateway.env`, with the reviewer code under `.data/demo-access.txt`. Vercel AI variables remain unconfigured until an HTTPS gateway URL is verified. The local authenticated gateway passed real Whisper/Ollama processing, audio range playback, action extraction and grounded Q&A using a self-created spoken fixture. Public tests passed 16/16 desktop/mobile journeys; local regression tests passed 24/24.
+
+Vercel Hobby rejected the original handler layout for exceeding its 12-function limit. The app now dispatches unchanged API URLs through one catch-all route, with implementation modules under `lib/api`. A separate `.next-ai` build directory keeps the persistent local backend independent of development/test builds. `scripts/configure-gateway.mjs` generates credentials privately and can install sensitive production environment variables after a tunnel is available. Vercel's GitHub repository connection needs separate confirmation even though CLI deployment works.
+
+Deployment inputs explicitly exclude private directories using `.vercelignore`; Git ignores alone were insufficient for the initial native CLI artifact. The initial artifacts were removed. Vercel runtime guards additionally forbid reading local meetings/shares when no remote backend is configured. The replacement deployment was verified to show exactly ten seeded meetings and no content at a known local meeting ID. Actual public video playback and seeking passed on desktop and mobile.
 
 ## Architecture
 
@@ -19,7 +25,8 @@ Generate credentials with `openssl rand -hex 32` and store outside Git in a priv
 Run the isolated backend with the existing package manager:
 
 ```
-pnpm dev --hostname 127.0.0.1 --port 3002
+NEXT_DIST_DIR=.next-ai pnpm build
+NEXT_DIST_DIR=.next-ai node --env-file=.data/gateway.env node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3002
 node --env-file=/absolute/private/gateway.env scripts/ai-gateway.mjs
 ```
 

@@ -7,7 +7,8 @@ export function demoToken() {
   return createHmac("sha256", process.env.AI_BACKEND_SECRET || "disabled").update(process.env.AI_DEMO_ACCESS_CODE || "disabled").digest("hex");
 }
 export function equalSecret(a: string, b: string) {
-  return a.length > 0 && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const actual = Buffer.from(a); const expected = Buffer.from(b);
+  return actual.length > 0 && actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 export async function demoAuthorized() {
   return Boolean(process.env.AI_DEMO_ACCESS_CODE && equalSecret((await cookies()).get("ai-demo")?.value || "", demoToken()));

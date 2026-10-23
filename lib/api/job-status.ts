@@ -5,3 +5,4 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   try { const job = await getJob(assertSafeId((await params).id)); return job ? NextResponse.json(job, { headers: { "cache-control": "no-store" } }) : NextResponse.json({ error: "Job not found." }, { status: 404 }); }
   catch { return NextResponse.json({ error: "Invalid job identifier." }, { status: 400 }); }
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

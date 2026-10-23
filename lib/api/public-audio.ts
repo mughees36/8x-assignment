@@ -11,3 +11,4 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return audioResponse(file, size, mimeType, request.headers.get("range"), "public");
   } catch { return NextResponse.json({ error: "Shared recording not found." }, { status: 404 }); }
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

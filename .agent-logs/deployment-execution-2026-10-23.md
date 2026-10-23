@@ -1,0 +1,13 @@
+# Deployment execution milestone
+
+Engineering note; not a reconstructed capture transcript. Existing hook configuration and historical capture logs are preserved. No credentials or private microphone audio are included.
+
+User approved GitHub push, installation of deployment tools, private credentials, tunnel exposure and Vercel deployment. GitHub authentication succeeded as the repository owner and main was pushed. Vercel CLI authenticated, created/linked the project, and deployed the seeded app at https://8x-assignment-theta.vercel.app. Anonymous HTTP returned 200 and 16 fresh-context desktop/mobile public product tests passed. The complete local regression suite passed 24/24 after API consolidation.
+
+The original deployment exceeded Vercel Hobby's 12-function limit. API handler implementations moved unchanged into lib/api and one catch-all dispatcher preserves the existing URLs. Independent .next-ai output prevents local development/test builds from replacing the persistent AI backend build. Secret creation is performed by a utility that writes only ignored files with restricted permissions; values are never printed or committed.
+
+Local gateway health verified all inference dependencies ready. A self-created spoken fixture was sent via a one-use upload ticket. Real Whisper output matched the speech, real Ollama extracted Maya/Thursday and Omar/tomorrow action items and a source-backed highlight. Playback returned HTTP 206. Meeting Q&A answered Maya with the actual 3-second transcript citation. An explicit source-text fallback was then added for decisions omitted by the small model.
+
+Cloudflare quick-tunnel API creation timed out three times, including HTTP/2 and IPv4/system-DNS attempts. No public AI URL or connected remote processing is claimed. Vercel AI environment variables are intentionally unset pending a verified tunnel. GitHub automatic deployment linking was also rejected by Vercel after login linking; GitHub App repository permission still needs resolution. CLI production deployment succeeded independently.
+
+Additional production verification detected four local records in the first CLI artifact despite Git ignores. The two earlier deployment artifacts were removed. Explicit .vercelignore exclusions and Vercel-side guards now prevent local storage reads without a remote backend. The replacement production deployment passed exact-ten-meetings assertions and actual media playback/seeking on desktop and mobile (2/2). A known local meeting ID returns the Next not-found boundary and no meeting content. The readiness endpoint reports the disconnected gateway honestly. Local recordings were preserved and none were committed to Git.

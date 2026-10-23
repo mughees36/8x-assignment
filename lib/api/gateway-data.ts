@@ -8,3 +8,4 @@ export async function GET(request: NextRequest) {
   try { return NextResponse.json(share ? await getShareSnapshot(share) || null : id ? await getLocalMeeting(id) || null : await listLocalMeetings()); }
   catch { return NextResponse.json(null, { status: 404 }); }
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

@@ -1,5 +1,6 @@
 node_modules
 .next
+.next-ai
 out
 .DS_Store
 *.log

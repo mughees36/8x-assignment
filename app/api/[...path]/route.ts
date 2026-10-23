@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from 'next/server';
+import * as backend from '@/lib/api/backend';
+import * as access from '@/lib/api/demo-access';
+import * as data from '@/lib/api/gateway-data';
+import * as ticket from '@/lib/api/upload-ticket';
+import * as jobs from '@/lib/api/jobs';
+import * as status from '@/lib/api/status';
+import * as job from '@/lib/api/job-status';
+import * as retry from '@/lib/api/job-retry';
+import * as ask from '@/lib/api/ask';
+import * as audio from '@/lib/api/audio';
+import * as share from '@/lib/api/share';
+import * as publicAudio from '@/lib/api/public-audio';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+async function dispatch(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const parts = (await context.params).path; const path = parts.join('/'); const post = request.method === 'POST';
+  if (parts[0] === 'backend') return backend[post ? 'POST' : 'GET'](request, { params: Promise.resolve({ path: parts.slice(1) }) });
+  if (path === 'demo-access' && post) return access.POST(request);
+  if (path === 'gateway-data' && !post) return data.GET(request);
+  if (path === 'upload-ticket' && post) return ticket.POST();
+  if (path === 'local-ai/status' && !post) return status.GET();
+  if (path === 'local-ai/jobs' && post) return jobs.POST(request);
+  const id = parts[2]; const params = Promise.resolve({ id });
+  if (/^local-ai\/jobs\/job-[a-z0-9-]+$/.test(path) && !post) return job.GET(request, { params });
+  if (/^local-ai\/jobs\/job-[a-z0-9-]+\/retry$/.test(path) && post) return retry.POST(request, { params });
+  if (/^local-ai\/meetings\/local-[a-z0-9-]+\/ask$/.test(path) && post) return ask.POST(request, { params });
+  if (/^local-ai\/meetings\/local-[a-z0-9-]+\/audio$/.test(path) && !post) return audio.GET(request, { params });
+  if (/^local-ai\/meetings\/local-[a-z0-9-]+\/share$/.test(path) && post) return share.POST(request, { params });
+  if (/^public\/shares\/[A-Za-z0-9_-]{43}\/audio$/.test(path) && !post) return publicAudio.GET(request, { params: Promise.resolve({ token: id }) });
+  return NextResponse.json({ error: 'Not found' }, { status: 404 });
+}
+export const GET = dispatch;
+export const POST = dispatch;

@@ -1,0 +1,9 @@
+.git
+.data
+.local-ai
+.next
+.next-ai
+node_modules
+.env*
+test-results
+playwright-report

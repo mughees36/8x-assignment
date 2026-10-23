@@ -13,3 +13,4 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     void processJob(id); return NextResponse.json({ jobId: id, meetingId: job.meetingId }, { status: 202 });
   } catch { return NextResponse.json({ error: "Invalid job identifier." }, { status: 400 }); }
 }
+// Dispatched through the shared API route to fit Vercel Hobby function limits.

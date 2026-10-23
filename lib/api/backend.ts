@@ -19,3 +19,4 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
 }
 export const GET = proxy;
 export const POST = proxy;
+// Dispatched through the shared API route to fit Vercel Hobby function limits.
