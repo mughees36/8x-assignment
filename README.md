@@ -2,9 +2,9 @@
 
 Public demo: https://8x-assignment-theta.vercel.app · Source: https://github.com/mughees36/8x-assignment
 
-The seeded public product is deployed and verified without login. Local gateway processing is verified on this Mac; a public AI tunnel is not yet connected because Cloudflare quick-tunnel creation timed out. The public recording button therefore remains unavailable. See [deployment status and startup instructions](docs/deployment.md).
+The seeded public product is deployed and verified without login. Live recording uses an authenticated Tailscale Funnel to this Mac's Whisper and Ollama gateway. When the Mac and gateway are online, the recording button is available with a private reviewer access code; otherwise the app reports AI unavailable while seeded meetings continue working. See [deployment status and startup instructions](docs/deployment.md).
 
-Deployment preparation includes a protected local Node gateway, server adapters, direct audio upload tickets, and a shared reviewer access code. See [deployment setup](docs/deployment.md) for startup, shutdown, environment variables, free-tier limits, and verification. Repository: https://github.com/mughees36/8x-assignment. Production URL is pending approval and authentication. Existing local development still works without gateway configuration.
+The protected local Node gateway, server adapters, direct audio upload tickets, and shared reviewer access code are implemented. See [deployment setup](docs/deployment.md) for startup, shutdown, environment variables, free-tier limits, and verification. Local development still works without gateway configuration.
 
 A Fathom-inspired Next.js 15 app for browser recording, local Whisper/Ollama processing, grounded meeting Q&A, and explicit read-only sharing. Ten deterministic fictional meetings remain usable without local AI.
 
@@ -55,8 +55,8 @@ Playwright covers seeded desktop/mobile workflows, recording lifecycle, private-
 
 ## Deployment, privacy, and limits
 
-Seeded features can run on a normal Node host. Local processing requires a trusted single-machine server, persistent writable storage, native processes, loopback Ollama, and installed models. Typical serverless hosting has ephemeral storage and cannot reach a user laptop’s Ollama, so local processing/sharing is not production-deployable there as written. Back up `.data` before migration. To invalidate a link today, remove only its matching `.data/shares/{token}.json` while stopped.
+The seeded product is deployed on Vercel. Local processing requires a persistent Mac host, native tools, loopback Ollama, and an authenticated HTTPS gateway. Tailscale Funnel and server-only Vercel credentials are configured, but the Mac services must stay online. Recordings created through the gateway are stored on the Mac, so they require the Mac online to reopen. The access code is stored privately at `.data/demo-access.txt` on the Mac; give it only to trusted reviewers because code holders share one demo workspace. Back up `.data` before migration. To invalidate a link today, remove only its matching `.data/shares/{token}.json` while stopped.
 
-Strong prototype foundations include server-only AI, loopback enforcement, bounded inputs, Zod schemas, safe IDs/tokens, atomic metadata, evidence-resolved citations, and hardened Range behavior. Demo-only tradeoffs include no auth/tenants, bearer links without expiry, local filesystem storage, no durable queue/locking/monitoring, one generic speaker, no long-transcript retrieval, and no transcript virtualization. Physical microphone and public deployment tests were not run for this milestone.
+Strong prototype foundations include server-only AI, loopback enforcement, bounded inputs, Zod schemas, safe IDs/tokens, atomic metadata, evidence-resolved citations, and hardened Range behavior. Demo-only tradeoffs include a shared reviewer access code instead of personal accounts, bearer links without expiry, local filesystem storage, no durable multi-host queue, one generic speaker, no long-transcript retrieval, and no transcript virtualization. Public desktop/mobile seeded media passed, and a self-created spoken fixture was captured by Chrome MediaRecorder on the deployed site, transcribed by real Whisper, summarized by Ollama, reopened after refresh, searched, played, and sought through a transcript line. The public test used Chrome's fake microphone device fed with actual spoken audio; it was not a test of a reviewer's physical microphone hardware.
 
 See [docs/product-decisions.md](docs/product-decisions.md).

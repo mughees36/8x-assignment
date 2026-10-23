@@ -4,15 +4,15 @@ Repository: https://github.com/mughees36/8x-assignment
 
 Production URL: https://8x-assignment-theta.vercel.app (unauthenticated seeded demo verified).
 
-GitHub push and Vercel deployment were approved and completed. Cloudflare quick-tunnel creation timed out three times, including HTTP/2 and IPv4 attempts; no public AI connection is claimed. Credentials exist privately under `.data/gateway.env`, with the reviewer code under `.data/demo-access.txt`. Vercel AI variables remain unconfigured until an HTTPS gateway URL is verified. The local authenticated gateway passed real Whisper/Ollama processing, audio range playback, action extraction and grounded Q&A using a self-created spoken fixture. Public tests passed 16/16 desktop/mobile journeys; local regression tests passed 24/24.
+GitHub push and Vercel deployment were approved and completed. Cloudflare quick-tunnel creation timed out three times, including HTTP/2 and IPv4 attempts. Tailscale Funnel now exposes only the authenticated gateway at `https://192.tail5320f5.ts.net`; Vercel has `AI_BACKEND_URL`, `AI_BACKEND_SECRET`, and `AI_DEMO_ACCESS_CODE` as sensitive production variables. The public alias is `https://8x-assignment-theta.vercel.app`. Credentials exist privately under `.data/gateway.env`, with the reviewer code under `.data/demo-access.txt`. The public AI browser test captured a self-created spoken fixture with MediaRecorder, then verified real Whisper transcript, Ollama summary/action extraction, audio playback and transcript seek, dashboard search, and grounded Q&A. Public seeded media passed desktop/mobile checks, and the local regression suite previously passed 24/24.
 
-Vercel Hobby rejected the original handler layout for exceeding its 12-function limit. The app now dispatches unchanged API URLs through one catch-all route, with implementation modules under `lib/api`. A separate `.next-ai` build directory keeps the persistent local backend independent of development/test builds. `scripts/configure-gateway.mjs` generates credentials privately and can install sensitive production environment variables after a tunnel is available. Vercel's GitHub repository connection needs separate confirmation even though CLI deployment works.
+Vercel Hobby rejected the original handler layout for exceeding its 12-function limit. The app now dispatches unchanged API URLs through one catch-all route, with implementation modules under `lib/api`. A separate `.next-ai` build directory keeps the persistent local backend independent of development/test builds. `scripts/configure-gateway.mjs` generates credentials privately and installs sensitive production environment variables. CLI deployment works; Vercel still rejects linking this GitHub repository for automatic deployment, even after the account login was connected. Repository access for the Vercel GitHub App must be granted separately.
 
 Deployment inputs explicitly exclude private directories using `.vercelignore`; Git ignores alone were insufficient for the initial native CLI artifact. The initial artifacts were removed. Vercel runtime guards additionally forbid reading local meetings/shares when no remote backend is configured. The replacement deployment was verified to show exactly ten seeded meetings and no content at a known local meeting ID. Actual public video playback and seeking passed on desktop and mobile.
 
 ## Architecture
 
-Vercel serves Next.js and the ten seeded meetings independently of the Mac. Server handlers use `AI_BACKEND_URL` and `AI_BACKEND_SECRET` to call a loopback Node gateway through an HTTPS Cloudflare tunnel. The gateway forwards only approved routes to an isolated Next process on port 3002. That process reuses the existing Whisper, FFmpeg, Ollama, Zod schemas, job pipeline and local persistence. Ollama stays at 127.0.0.1:11434.
+Vercel serves Next.js and the ten seeded meetings independently of the Mac. Server handlers use `AI_BACKEND_URL` and `AI_BACKEND_SECRET` to call a loopback Node gateway through an HTTPS Tailscale Funnel. The gateway forwards only approved routes to an isolated Next process on port 3002. That process reuses the existing Whisper, FFmpeg, Ollama, Zod schemas, job pipeline and local persistence. Ollama stays at 127.0.0.1:11434.
 
 Browser audio bypasses Vercel body limits: an authorized server handler issues a 120-second single-use upload ticket, then the browser sends its audio form directly to the gateway. Gateway uploads have a 25 MB limit and 120-second request limit. Processing is asynchronous; the browser polls the job and can retry. Failed inference retains server audio. Failed uploads retain the Blob in the open browser tab; closing or refreshing that tab before upload succeeds loses that Blob.
 
@@ -34,22 +34,27 @@ Both processes need the gateway secret in their environment. The isolated Next p
 
 Keep `.data` on the Mac or set `AI_DATA_DIR` for the Next process to an approved persistent location. Gateway manifest remains under its working directory's `.data`. Back up both. No cloud database or storage account is provisioned: the Mac is the persistent backend, so completed local recordings require it online. Seeded meetings remain usable offline. A shared Mac recording returns unavailable when its host is offline.
 
-## Tunnel (requires exposure approval)
+## Tailscale Funnel
 
-cloudflared is not installed yet. After approval, install it and either create a stable named tunnel for a domain you control or use:
+The approved Tailscale CLI is installed on this Mac. A userspace daemon stores its state in the ignored `.data` directory and avoids a systemwide VPN. Start it from the project root:
 
 ```
-cloudflared tunnel --url http://127.0.0.1:8787
+tailscaled --tun=userspace-networking --state="$PWD/.data/tailscaled.state" --socket="$PWD/.data/tailscaled.sock" --statedir="$PWD/.data/tailscale"
+tailscale --socket="$PWD/.data/tailscaled.sock" up --accept-dns=false
+tailscale --socket="$PWD/.data/tailscaled.sock" funnel --bg http://127.0.0.1:8787
+tailscale --socket="$PWD/.data/tailscaled.sock" funnel status
 ```
 
-A quick tunnel URL changes on restart; update AI_BACKEND_URL on Vercel and redeploy. It is suitable for a supervised demo, not permanent hosting. Expose only port 8787. Do not tunnel port 3000, 3002, or 11434. Keep the app server and Ollama bound to loopback. For a named tunnel, add Cloudflare access controls where compatible with the ticket upload flow; service-token-only Access policies would block direct browser uploads unless explicitly configured for them.
+The first `up` requires a Tailscale account login; the first `funnel` requires enabling Funnel for this device in Tailscale's web console. Funnel assigns an HTTPS `*.ts.net` URL. Set only that exact URL as `AI_BACKEND_URL` on Vercel. The public Funnel port is 443 and its only local target is the authenticated gateway on 8787. Never funnel ports 3000, 3002, or 11434. Tailscale Funnel also needs MagicDNS and HTTPS certificates in the tailnet. [Tailscale's Funnel documentation](https://tailscale.com/docs/features/tailscale-funnel) describes those prerequisites and account limits.
+
+The URL may remain stable while this device remains in the tailnet, but the Mac, daemon, local Next process, gateway, and Ollama must all be running for AI to work. To close public access, run `tailscale --socket="$PWD/.data/tailscaled.sock" funnel reset` before stopping the gateway. The current CLI variant runs as a user process; it does not automatically start after a reboot. Use the startup commands above after restarting the Mac.
 
 ## Vercel (requires authentication and deployment approval)
 
-Import the GitHub repository, framework Next.js, build `pnpm build`, output default, Node 22 or newer. Set AI_BACKEND_URL (HTTPS gateway URL), AI_BACKEND_SECRET, and AI_DEMO_ACCESS_CODE as server secrets. No Mac paths or models belong on Vercel. Seed-only deployment may omit all three; recording remains unavailable. No paid AI services are used. Free-tier Vercel execution and body limits still apply to small JSON requests and proxied playback; supervise demo traffic. Large audio uploads do not pass through Vercel.
+The Vercel project is already deployed with framework Next.js, build `pnpm build`, output default, and Node 24. To rotate credentials or change a Funnel URL, run `DEPLOYMENT_GATEWAY_URL=https://your-host.ts.net node scripts/configure-gateway.mjs --vercel` from the linked project and redeploy. `AI_BACKEND_URL` (HTTPS gateway URL), `AI_BACKEND_SECRET`, and `AI_DEMO_ACCESS_CODE` are server-only production secrets; no `NEXT_PUBLIC_` secret is used. No Mac paths or models belong on Vercel. Seed-only deployment may omit these variables, in which case recording remains unavailable. No paid AI services are used. Free-tier Vercel execution and body limits still apply to small JSON requests and proxied playback; supervise demo traffic. Large audio uploads do not pass through Vercel.
 
 ## Verification and shutdown
 
-Run `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test:e2e`, and `node --test tests/gateway.test.mjs`. A production test must use real speech over HTTPS, check actual transcript and summaries, refresh the saved meeting, seek audio, and open an explicit share in a fresh browser context. Stop the Mac gateway to verify honest offline behavior.
+Run `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test:e2e`, and `node --test tests/gateway.test.mjs`. For a real public speech test, create a private self-spoken fixture at `.data/gateway-verification.wav`, then run `node --env-file=.data/gateway.env scripts/verify-public-ai.mjs`. The script uses Chrome's fake microphone device, but actual MediaRecorder audio travels through the production browser/Funnel/Whisper/Ollama workflow. It checks transcript, summary, decisions, actions, dashboard search, playback, seeking, Q&A, and a seeded public share in a fresh browser context. It creates a private test recording; it never publishes that recording. Daily AI quota may require waiting until the next UTC day before repeat runs. Stop the Mac gateway to verify honest offline behavior.
 
-Stop cloudflared first to remove internet access, then stop the gateway and isolated Next process. Rotate the gateway secret and demo code if disclosed. Never commit private recordings, `.data`, models, env files, or credential files.
+Reset Tailscale Funnel first to remove internet access, then stop the gateway and isolated Next process. Rotate the gateway secret and demo code if disclosed. Never commit private recordings, `.data`, models, env files, or credential files.

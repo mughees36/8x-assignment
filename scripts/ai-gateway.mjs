@@ -73,4 +73,4 @@ const server = http.createServer(async (req, res) => {
   finally { if (inference && (res.statusCode >= 400 || path.endsWith('/ask'))) busy = false; }
 });
 server.requestTimeout = 120_000;
-server.listen(Number(process.env.AI_GATEWAY_PORT || 8787), '127.0.0.1', () => console.log('Authenticated AI gateway listening on loopback. No tunnel has been opened.'));
+server.listen(Number(process.env.AI_GATEWAY_PORT || 8787), '127.0.0.1', () => console.log('Authenticated AI gateway listening on loopback.'));

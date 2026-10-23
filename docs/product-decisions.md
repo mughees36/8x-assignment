@@ -4,7 +4,7 @@
 
 Vercel calls a protected Node gateway that reuses the existing processing routes through an isolated loopback Next process. Single-use direct audio upload tickets bypass serverless request body limits. Async jobs and recordings persist on the Mac, with a gateway manifest excluding existing private recordings. No external database or paid service was provisioned. Seeded meetings work independently; hosted recordings require the Mac online.
 
-The reviewer access code grants a shared demo workspace rather than per-user accounts. Explicit bearer shares allow outsiders read-only access. A single active inference and a six-request default daily quota contain demo resource use. A production multi-tenant product still needs user authorization, durable workers, object storage, distributed limits, and backups. Public exposure is pending approval.
+The reviewer access code grants a shared demo workspace rather than per-user accounts. Explicit bearer shares allow outsiders read-only access. A single active inference and a six-request default daily quota contain demo resource use. Tailscale Funnel exposes only the authenticated gateway, while Ollama, Whisper's Next process, and storage stay on Mac loopback. A production multi-tenant product still needs user authorization, durable workers, object storage, distributed limits, and backups.
 
 ## Trust model
 
@@ -32,4 +32,4 @@ Microphone permission follows a named user action; the live room never fabricate
 
 The UI, validation, atomic metadata, and privacy routing are strong prototype foundations. Production requires authenticated tenants, durable object/database storage, encryption/key management, consent/retention policy, idempotent workers, diarization, share management, abuse controls, backups, metrics, and deployment-specific AI infrastructure. Serverless platforms generally cannot persist `.data` or reach an end user’s loopback Ollama.
 
-Automated checks use synthetic fixture files and mocked AI responses. They do not claim physical microphone testing, real Whisper/Ollama quality evaluation, a codec matrix, or public deployment validation.
+Local automated checks use synthetic fixture files and mocked AI responses. A separate public test used a self-created spoken recording as Chrome's microphone input; browser MediaRecorder captured it, Whisper transcribed it, Ollama summarized/extracted it, and the deployed app reopened, searched, played, and sought the saved meeting. This establishes the hosted integration with actual speech, but does not establish physical microphone quality across devices, production scalability, or a codec matrix. The recorded test meeting remained private; the fresh-browser sharing check used seeded public content.
