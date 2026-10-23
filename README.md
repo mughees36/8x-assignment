@@ -1,5 +1,7 @@
 # 8xCareers Meeting Intelligence
 
+Deployment preparation includes a protected local Node gateway, server adapters, direct audio upload tickets, and a shared reviewer access code. See [deployment setup](docs/deployment.md) for startup, shutdown, environment variables, free-tier limits, and verification. Repository: https://github.com/mughees36/8x-assignment. Production URL is pending approval and authentication. Existing local development still works without gateway configuration.
+
 A Fathom-inspired Next.js 15 app for browser recording, local Whisper/Ollama processing, grounded meeting Q&A, and explicit read-only sharing. Ten deterministic fictional meetings remain usable without local AI.
 
 ## Features and architecture

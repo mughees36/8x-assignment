@@ -10,7 +10,7 @@ export const localAISettings = {
   whisperModelPath: process.env.WHISPER_MODEL_PATH ?? path.join(projectRoot, ".local-ai/models/ggml-small.en.bin"),
   ffmpegPath: process.env.FFMPEG_PATH ?? "/opt/homebrew/bin/ffmpeg",
   whisperCliPath: process.env.WHISPER_CLI_PATH ?? "/opt/homebrew/bin/whisper-cli",
-  dataDir: path.join(projectRoot, ".data"),
+  dataDir: process.env.AI_DATA_DIR ?? path.join(projectRoot, ".data"),
 } as const;
 
 export function isLoopbackUrl(value: string) {

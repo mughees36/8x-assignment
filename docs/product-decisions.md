@@ -1,5 +1,11 @@
 # Product and architecture decisions
 
+## Hosted frontend with local inference
+
+Vercel calls a protected Node gateway that reuses the existing processing routes through an isolated loopback Next process. Single-use direct audio upload tickets bypass serverless request body limits. Async jobs and recordings persist on the Mac, with a gateway manifest excluding existing private recordings. No external database or paid service was provisioned. Seeded meetings work independently; hosted recordings require the Mac online.
+
+The reviewer access code grants a shared demo workspace rather than per-user accounts. Explicit bearer shares allow outsiders read-only access. A single active inference and a six-request default daily quota contain demo resource use. A production multi-tenant product still needs user authorization, durable workers, object storage, distributed limits, and backups. Public exposure is pending approval.
+
 ## Trust model
 
 Seeded meetings are deterministic demo fixtures with stable public URLs. Recorded meetings are private server files addressed by validated local IDs. Public local shares are explicit, immutable snapshots addressed only by a random 256-bit bearer token. Opening a meeting or share dialog writes nothing; **Create public link** performs the privacy transition. Public audio first validates the token/snapshot before locating media. Tokens are fixed-length base64url and JSON writes use mode `0600`, sync, and atomic rename.

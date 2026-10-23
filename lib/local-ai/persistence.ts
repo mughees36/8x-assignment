@@ -3,6 +3,7 @@ import { mkdir, open, readFile, rename, stat, writeFile } from "node:fs/promises
 import path from "node:path";
 import type { LocalShareSnapshot, Meeting, ProcessingJob } from "@/lib/types";
 import { localAISettings } from "@/lib/local-ai/settings";
+import { remoteAI, backendFetch, demoAuthorized } from "@/lib/local-ai/backend";
 
 const SAFE_ID = /^[a-z0-9][a-z0-9-]{7,80}$/;
 const SAFE_TOKEN = /^[A-Za-z0-9_-]{43}$/;
@@ -53,7 +54,10 @@ export async function saveOriginal(meetingId: string, bytes: Uint8Array) {
 export async function saveJob(job: ProcessingJob) { await atomicJson(withinData("jobs", `${assertSafeId(job.id)}.json`), job); }
 export async function getJob(id: string) { return readJson<ProcessingJob>(withinData("jobs", `${assertSafeId(id)}.json`)); }
 export async function saveMeeting(meeting: Meeting) { await atomicJson(withinData("meetings", `${assertSafeId(meeting.id)}.json`), meeting); }
-export async function getLocalMeeting(id: string) { return readJson<Meeting>(withinData("meetings", `${assertSafeId(id)}.json`)); }
+export async function getLocalMeeting(id: string): Promise<Meeting | undefined> {
+  if (remoteAI) { if (!(await demoAuthorized())) return undefined; try { const r = await backendFetch(`/api/gateway-data?id=${assertSafeId(id)}`); return r.ok ? await r.json() || undefined : undefined; } catch { return undefined; } }
+  return readJson<Meeting>(withinData("meetings", `${assertSafeId(id)}.json`));
+}
 
 export async function createShareSnapshot(meeting: Meeting) {
   if (meeting.origin !== "local-recording") throw new Error("Only local meetings require snapshots");
@@ -64,6 +68,7 @@ export async function createShareSnapshot(meeting: Meeting) {
 }
 
 export async function getShareSnapshot(token: string) {
+  if (remoteAI) { try { const r = await backendFetch(`/api/gateway-data?share=${assertSafeShareToken(token)}`); return r.ok ? await r.json() as LocalShareSnapshot | undefined : undefined; } catch { return undefined; } }
   return readJson<LocalShareSnapshot>(withinData("shares", `${assertSafeShareToken(token)}.json`));
 }
 
@@ -74,6 +79,7 @@ export async function revokeShareSnapshot(token: string) {
 }
 
 export async function listLocalMeetings(): Promise<Meeting[]> {
+  if (remoteAI) { if (!(await demoAuthorized())) return []; try { const r = await backendFetch('/api/gateway-data'); return r.ok ? await r.json() : []; } catch { return []; } }
   const directory = withinData("meetings");
   try {
     const { readdir } = await import("node:fs/promises");
