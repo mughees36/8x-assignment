@@ -88,3 +88,14 @@ export async function getAudioPath(id: string, converted = false) {
   const info = await stat(file);
   return { file, size: info.size };
 }
+
+export async function getPlaybackAudioPath(id: string, originalMimeType = "application/octet-stream") {
+  try {
+    const audio = await getAudioPath(id, true);
+    return { ...audio, mimeType: "audio/wav" };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    const audio = await getAudioPath(id);
+    return { ...audio, mimeType: originalMimeType };
+  }
+}

@@ -32,7 +32,7 @@ pnpm dev
 
 Start Ollama and ensure the configured model is present. Open `http://localhost:3000`, choose **New meeting**, enter a title, explicitly grant microphone permission, and start. Ending uploads the encoded audio and begins processing. Permission is never requested on load.
 
-Pipeline: `MediaRecorder` → `.data/recordings/{id}/original.media` → FFmpeg 16 kHz mono WAV → whisper.cpp timestamped JSON → Ollama schema-constrained intelligence → `.data/meetings/{id}.json`. Jobs live in `.data/jobs`. JSON uses a synced temporary file and atomic rename. Original media is retained after failure so **Retry processing** can recover after dependency fixes. Silence, permissions, codecs, and unavailable tools produce honest failures.
+Pipeline: `MediaRecorder` → `.data/recordings/{id}/original.media` → FFmpeg 16 kHz mono WAV → whisper.cpp timestamped JSON → Ollama schema-constrained intelligence → `.data/meetings/{id}.json`. The seekable WAV derivative powers private and shared playback; the original browser encoding remains available for retry/reprocessing. Jobs live in `.data/jobs`. JSON uses a synced temporary file and atomic rename. Silence, permissions, codecs, and unavailable tools produce honest failures.
 
 Sharing stores `.data/shares/{token}.json`; the snapshot does not change if the private meeting changes. Possession of the URL grants access: this demo has no authentication or expiry. Storage supports revocation, but no management UI/API is exposed. Private/public media endpoints accept one full, open, or suffix Range and return `416` for malformed/unsatisfiable ranges.
 

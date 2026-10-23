@@ -91,7 +91,19 @@ export function chunkTranscript(entries: TranscriptEntry[], maxChars = 12_000) {
   return chunks;
 }
 
+const materialSignal = /\b(decid(?:e|ed|ing)|risk|block(?:er|ed|ing)?|will|need(?:s)? to|must|should|please|follow up|next step|send|prepare|create|update|review|confirm|schedule|share|deliver|invite|complete|fix|draft|launch|approve|deadline|due)\b/i;
+
 async function analyze(entries: TranscriptEntry[]): Promise<AIResult> {
+  const spokenText = entries.map((entry) => entry.text).join(" ").trim();
+  if (spokenText.split(/\s+/).length < 12 && !materialSignal.test(spokenText)) {
+    const quote = spokenText.slice(0, 500);
+    return {
+      general: { overview: `This short recording contains one brief statement: “${quote}”`, keyPoints: [quote], decisions: [], risks: [], nextSteps: [], actionItems: [] },
+      executiveBrief: { overview: "No decision, risk, or business outcome was explicitly stated in this short recording.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] },
+      actionFocused: { overview: "No explicit owner, due date, or next step was stated in this short recording.", keyPoints: [], decisions: [], risks: [], nextSteps: [], actionItems: [] },
+      decisions: [], risks: [], nextSteps: [], actions: [], highlights: [],
+    };
+  }
   const chunks = chunkTranscript(entries);
   let evidence = chunks[0];
   if (chunks.length > 1) {
@@ -121,6 +133,34 @@ function nearestTimestamp(requested: number, entries: TranscriptEntry[]) {
 function insights(items: Array<{ text: string; sourceTimestampSeconds: number; owner?: string | null; dueDate?: string | null; supportingTranscript?: string }>, prefix: string, entries: TranscriptEntry[]): Insight[] {
   return items.map((item, index) => ({ id: `${prefix}-${index + 1}`, text: item.text, timestampSeconds: nearestTimestamp(item.sourceTimestampSeconds, entries), ...(item.owner ? { owner: item.owner } : {}), ...(item.dueDate ? { dueDate: item.dueDate } : {}), ...(item.supportingTranscript ? { supportingTranscript: item.supportingTranscript } : {}) }));
 }
+function sourceTextFor(insight: Insight, entries: TranscriptEntry[]) {
+  return entries.reduce((closest, entry) => Math.abs(entry.startSeconds - insight.timestampSeconds) < Math.abs(closest.startSeconds - insight.timestampSeconds) ? entry : closest, entries[0]).text.toLowerCase();
+}
+function mentioned(value: string | undefined, source: string) {
+  if (!value) return true;
+  const tokens = value.toLowerCase().match(/[a-z0-9]+/g)?.filter((token) => token.length > 2) ?? [];
+  return tokens.length > 0 && tokens.some((token) => source.includes(token));
+}
+function claimMatchesSource(claim: string, source: string) {
+  const ignored = new Set(["about", "after", "before", "could", "meeting", "should", "their", "there", "these", "those", "would"]);
+  const tokens = claim.toLowerCase().match(/[a-z0-9]+/g)?.filter((token) => token.length > 3 && !ignored.has(token)) ?? [];
+  const matches = tokens.filter((token) => source.includes(token)).length;
+  return matches >= Math.min(2, tokens.length) && tokens.length > 0;
+}
+function hasDecisionEvidence(insight: Insight, entries: TranscriptEntry[]) {
+  const source = sourceTextFor(insight, entries);
+  return materialSignal.test(source) && claimMatchesSource(insight.text, source);
+}
+function hasActionEvidence(insight: Insight, entries: TranscriptEntry[]) {
+  const source = sourceTextFor(insight, entries);
+  return materialSignal.test(source) && claimMatchesSource(insight.text, source) && mentioned(insight.owner, source) && mentioned(insight.dueDate, source);
+}
+function hasHighlightEvidence(insight: Insight, entries: TranscriptEntry[]) {
+  const source = sourceTextFor(insight, entries);
+  const support = insight.supportingTranscript?.trim().toLowerCase();
+  const quotedEvidence = Boolean(support && (source.includes(support) || support.includes(source)));
+  return quotedEvidence && (materialSignal.test(source) || source.split(/\s+/).length >= 18);
+}
 function templates(result: AIResult): Meeting["summaries"] {
   return { General: result.general, "Executive Brief": result.executiveBrief, "Action-Focused": result.actionFocused } satisfies Record<SummaryTemplateName, SummaryContent>;
 }
@@ -140,7 +180,11 @@ export async function processJob(jobId: string) {
       id: job.meetingId, title: job.title, date: job.createdAt, durationSeconds: parsed.duration,
       participants: [{ id: "speaker", name: "Speaker", role: "Recorded locally", initials: "S", color: "#245c45" }],
       summary: result.general.overview, tags: ["Local AI"], status: "ready", origin: "local-recording", source: "Local recording",
-      transcript: parsed.entries, decisions: insights(result.decisions, "decision", parsed.entries), actionItems: insights(result.actions, "action", parsed.entries), highlights: insights(result.highlights, "highlight", parsed.entries), summaries: templates(result),
+      transcript: parsed.entries,
+      decisions: insights(result.decisions, "decision", parsed.entries).filter((item) => hasDecisionEvidence(item, parsed.entries)),
+      actionItems: insights(result.actions, "action", parsed.entries).filter((item) => hasActionEvidence(item, parsed.entries)),
+      highlights: insights(result.highlights, "highlight", parsed.entries).filter((item) => hasHighlightEvidence(item, parsed.entries)),
+      summaries: templates(result),
       mediaUrl: `/api/local-ai/meetings/${job.meetingId}/audio`, audio: { mimeType: job.audioMimeType ?? "application/octet-stream", originalFileName: "original.media" },
     };
     await setStage(jobId, "preparing-workspace");
